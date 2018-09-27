@@ -1,8 +1,9 @@
 ;;;; preeti->unicode.lisp
 (in-package #:preeti->unicode)
 
-(defparameter *conversion-list*  (list "` 1 2 3 4 5 6 7 8 9 0 - = q w e r t y u i o p [ ] \\ a s d f g h j k l ; ' < z x c v b n m , . / ~ ! @ # $ % ^ & * ( ) _ + Q W E R T Y U I O P { } | A S D F G H J K L : \" > Z X C V B N M < > ? ç ¿ ? ª § ° ¶ Ë Ì Í Î ‹ • ˆ ß Ø Ý å Ù Û Œ « Ö Ú £ ÷ ¥ œ qm Qm pm em km 0f if If ® “ Af Sf Df Gf Jf Kf :f Wf Ef Rf Tf Yf Uf Zf Xf Vf Nf ˆf cf "
-	     "ञ ज्ञ द्द घ द्ध छ ट ठ ड ढ ण् ( . त्र ध भ च त थ ग ष् य उ ृ े ् ब क म ा न ज व प ि स ु ? श ह अ ख द ल m , । र ञ् १ २ ३ ४ ५ ६ ७ ८ ९ ० ) ं त्त ध् भ् च् त् थ् ग् क्ष् इ ए र् ै ्र ब् क् म् ँ न् ज् व् प् ी स् ू श्र श् ह् ऋ ख् द्य ल् ः ? श्र रु ॐ रू रु ङ ट्ट ड्ढ ठ्ठ ङ्ग न्न ङ्क ङ्ख ङ्घ ड्ड फ् द्म ्य ट्ठ द्व ; ! त्त् ्र = ' घ् / र् त्र् क्र क्त ऊ झ फ ण ष क्ष र ँ ब क म न ज प स ध भ च त थ ग श ह ख ल फ आ "))
+(defparameter *conversion-list*  (list
+"` 1 2 3 4 5 6 7 8 9 0 - = q w e r t y u i o p [ ] \\ a s d f g h j k l ; ' < z x c v b n m , . / ~ ! @ # $ % ^ & * ( ) _ + Q W E R T Y U I O P { } | A S D F G H J K L : \" > Z X C V B N M < > ? ç ¿ ? ª § ° ¶ Ë Ì Í Î ‹ • ˆ ß Ø Ý å Ù Û Œ « Ö Ú £ ÷ ¥ œ qm Qm pm em km 0f if If ® “ Af Sf Df Gf Jf Kf :f Wf Ef Rf Tf Yf Uf Zf Xf Vf Nf ˆf cf Å ” ‰ "
+	     "ञ ज्ञ द्द घ द्ध छ ट ठ ड ढ ण् ( . त्र ध भ च त थ ग ष् य उ ृ े ् ब क म ा न ज व प ि स ु ? श ह अ ख द ल m , । र ञ् १ २ ३ ४ ५ ६ ७ ८ ९ ० ) ं त्त ध् भ् च् त् थ् ग् क्ष् इ ए र् ै ्र ब् क् म् ँ न् ज् व् प् ी स् ू श्र श् ह् ऋ ख् द्य ल् ः ? श्र रु ॐ रू रु ङ ट्ट ड्ढ ठ्ठ ङ्ग न्न ङ्क ङ्ख ङ्घ ड्ड फ् द्म ्य ट्ठ द्व ; ! त्त् ्र = ' घ् / र् त्र् क्र क्त ऊ झ फ ण ष क्ष र ँ ब क म न ज प स ध भ च त थ ग श ह ख ल फ आ हृ ँ झ् "))
 (Defparameter *base-letter* "` 1 2 3 4 5 6 7 8 9 0 q w e r t y u i o p a s d g h j k ; z x c v b n  / ® ~ Q W E R TY U I O P  A S D G H J K : > Z X C V B N ? ç ¿ ª § ° ¶ Ë Ì Í Î ‹ • ˆ ß Ý å Œ £ ¥")
 
 (defparameter *half-letter* "0 i ~ W E R T Y U I A S D G H J K : Z X V N Œ £ ¥ œ ˆ ")
@@ -14,6 +15,7 @@
 (defparameter *suffix* "M \" L F } + ' ] [ f m { ")
 (defparameter *hanuman-chars* "qQpek") ;; these may use m to make different letter
 (defparameter *conversion-table* (make-hash-table :test 'equal))
+
 
 (defun create-table ()
   (let ((preeti (bpu:explode (first *conversion-list*) #\Space))
@@ -30,6 +32,7 @@
 (defmacro add-block ()
   `(if (or pre base suff)
        (progn
+	                ;;; reverse suff because it was push
          (push (list pre base (reverse suff)) result)
          (setf pre nil base nil suff nil))))
 
@@ -37,9 +40,11 @@
   "Separate word into blocks of prefix+base-letter+suffix"
   (let (result final pre base suff)
     (loop for char across word do
-         (cond ((find char *prefix*) (add-block)
-                (setf pre (list char)))
-               ((find char *base-letter*) (if base (add-block))
+         (cond ((find char *prefix*)
+		(add-block)  ;; end old block 
+                (setf pre (list char))) 
+               ((find char *base-letter*)
+		(if base (add-block)) ;; end old block 
                 (setf base  char))
                ((find char *suffix*) (push char suff))
                (t (if base (push char suff) (setf base char)))))
@@ -67,10 +72,11 @@
     (loop for (pre base suff) in blocks do
        ;;Transpose chars
 
+       ;;         if base is full letter
          (if (or (and (find base *full-letter*) (not (find #\\ suff)))
                  (and (find base *half-letter*) (find #\f suff)))
              (progn (transpose #\l pre suff) ;; इकार
-                    (when carry-over
+                    (when carry-over         ;; copy carry overs
                       (setf suff (bpu:copy-elements carry-over suff))
                       (setf carry-over nil)))
              (transpose #\l pre carry-over))
@@ -95,12 +101,28 @@
                 (when (find c suff)
                   (setf suff (remove-once c (Remove-once #\f suff)))
                   (push rep suff))))
-         
-;;       (print (list pre base suff))
+       ;; bring | i.e. ्र  to front of suff
+	 (when (find #\| suff)
+	   (setf suff (remove-once #\| suff))
+	   (push #\| suff))
+       ;; and ” to the back
+	 (when (find #\” suff)
+	   (setf suff (reverse (remove #\” suff)))
+	   (push #\” suff)
+	   (setf suff (reverse suff)))
+
+       ;; Remove duplicates
+	 (setf suff (remove-duplicates suff))
+
        ;; Now convert and join
          (translate-chars pre)
-         (if base (format str "~a" (translate base)))
-         (translate-chars suff))
+	 (if base (format str "~a" (translate base)))
+       ;; if ः appears without any base. change it to : 
+         (if (eql base nil)
+	     (progn (setf suff (remove #\M suff))
+		    (translate-chars suff)
+		    (format str ":"))
+	     (translate-chars suff)))
     str)))
 
 (defun convert-word (word)
